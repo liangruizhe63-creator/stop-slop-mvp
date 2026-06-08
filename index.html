@@ -3,20 +3,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AI检测工具</title>
+    <title>TextTrace - AI文本检测工具</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="shell">
       <section class="hero">
-        <p class="eyebrow">hardikpandya/stop-slop inspired MVP</p>
-        <h1>AI文本检测工具</h1>
-        <p class="lede">
-          粘贴文本，一键分析AI生成概率、重复率和写作特征。
-        </p>
+        <p class="eyebrow">TextTrace</p>
+        <h1>TextTrace</h1>
+        <p class="lede">AI文本检测工具</p>
         <div class="hero-chips">
           <span>中英文都能演示</span>
-          <span>规则命中可视化</span>
+          <span>风险特征可视化</span>
           <span>一键复制结果</span>
         </div>
       </section>
@@ -24,16 +22,16 @@
       <section class="workspace">
         <div class="panel input-panel">
           <div class="panel-title">
-            <h2>草稿</h2>
+            <h2>待检测文本</h2>
             <div class="sample-buttons">
-              <button type="button" data-sample="zh">测试文本</button>
+              <button type="button" data-sample="zh">中文样例</button>
               <button type="button" data-sample="en">English sample</button>
             </div>
           </div>
 
           <div class="toolbar">
             <label class="mode-picker" for="modeSelect">
-              <span>改写强度</span>
+              <span>检测模式</span>
               <select id="modeSelect">
                 <option value="light">轻度</option>
                 <option value="balanced" selected>标准</option>
@@ -46,20 +44,20 @@
           <textarea id="draft" spellcheck="false"></textarea>
 
           <div class="actions">
-            <button id="rewriteBtn" class="primary" type="button">检测并改写</button>
+            <button id="rewriteBtn" class="primary" type="button">开始检测</button>
             <button id="clearBtn" type="button">清空</button>
           </div>
         </div>
 
         <div class="panel output-panel">
           <div class="panel-title">
-            <h2>AI检测结果</h2>
+            <h2>检测结果</h2>
             <div class="output-meta">
-              <span id="scoreBadge" class="score-badge">等待检测</span>
+              <span id="scoreBadge" class="score-badge">等待输入</span>
               <button id="copyBtn" type="button">复制结果</button>
             </div>
           </div>
-          <div id="output" class="output empty">AI率、文本特征和优化建议会显示在这里。</div>
+          <div id="output" class="output empty">结果会显示在这里。</div>
           <p id="copyHint" class="copy-hint">复制后可以直接贴到邮件、帖子或文档里。</p>
         </div>
       </section>
@@ -72,13 +70,13 @@
           </div>
           <div class="compare-grid">
             <div>
-              <h3>疑似AI痕迹</h3>
+              <h3>原稿标注</h3>
               <div id="annotated" class="output empty">这里会高亮原稿里的套路表达。</div>
             </div>
             <div>
               <h3>检测说明</h3>
               <ul id="rewriteNotes" class="findings">
-                <li>改写后会说明这次主要做了哪些动作。</li>
+                <li>检测后会说明这次主要发现了哪些文本特征。</li>
               </ul>
             </div>
           </div>
@@ -97,7 +95,7 @@
         </article>
 
         <article class="panel">
-          <h2>检测规则</h2>
+          <h2>规则说明</h2>
           <div id="ruleLegend" class="legend-grid"></div>
         </article>
       </section>

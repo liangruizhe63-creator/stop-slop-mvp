@@ -16,6 +16,8 @@ const samples = {
   en: `In today's fast-paced digital landscape, it is important to note that AI is not just a tool, but a transformative force. This article will explore how teams can leverage it to unlock efficiency, drive innovation, and achieve meaningful outcomes.`
 };
 
+const brandName = "TextTrace";
+
 const rules = [
   {
     label: "中文开场套话",
@@ -67,8 +69,8 @@ const modeConfigs = {
   light: {
     badge: "轻度模式",
     notes: [
-      "只动最明显的套话，不硬改原句结构。",
-      "更适合你已经有个人语气，只想去掉一点 AI 味的时候。"
+      "只标出最明显的模板表达，适合快速初筛。",
+      `${brandName} 会保留文本原意，重点提示高风险表达。`
     ],
     zh: [
       [/在当今快速变化的时代，?/g, ""],
@@ -87,8 +89,8 @@ const modeConfigs = {
   balanced: {
     badge: "标准模式",
     notes: [
-      "删掉模板化开场，保留主要意思。",
-      "会适度缩短句子，把抽象词换成更像人会说的话。"
+      "会综合查看开场套话、抽象词密度和句式模板。",
+      `${brandName} 会给出更完整的 AI 文本风险解释。`
     ],
     zh: [
       [/在当今快速变化的时代，?/g, ""],
@@ -96,9 +98,9 @@ const modeConfigs = {
       [/本文将深入探讨/g, "我们直接看"],
       [/人工智能/g, "AI"],
       [/正在深刻地改变/g, "已经改了"],
-      [/内容创作的方式/g, "团队写草稿、改稿和定稿的流程"],
+      [/内容创作的方式/g, "团队产出内容的流程"],
       [/这不仅仅是一次技术升级，更是一场关于表达效率的革命/g, "它真正有用的地方，是帮人更快看见废话"],
-      [/企业应该积极拥抱这项能力/g, "团队可以先把它用在改稿上"],
+      [/企业应该积极拥抱这项能力/g, "团队可以先把它用在内容审核上"],
       [/实现更高质量的增长/g, "少交付空话，多交付能读的文本"]
     ],
     en: [
@@ -114,8 +116,8 @@ const modeConfigs = {
   strong: {
     badge: "强力模式",
     notes: [
-      "会更狠地删掉空话，把句子压短。",
-      "更适合做演示，因为前后变化最明显。"
+      "会更严格地标记模板腔、空泛词和过度包装表达。",
+      "适合演示高敏感度检测结果。"
     ],
     zh: [
       [/在当今快速变化的时代，?/g, ""],
@@ -123,9 +125,9 @@ const modeConfigs = {
       [/本文将深入探讨为什么/g, "先看一个实际问题："],
       [/人工智能/g, "AI"],
       [/正在深刻地改变/g, "已经改了"],
-      [/内容创作的方式/g, "写草稿和改稿这件事"],
+      [/内容创作的方式/g, "内容生产这件事"],
       [/这不仅仅是一次技术升级，更是一场关于表达效率的革命/g, "它最值钱的地方，是能更快揪出废话"],
-      [/企业应该积极拥抱这项能力/g, "团队先把它拿来改稿就行"],
+      [/企业应该积极拥抱这项能力/g, "团队先把它拿来做文本检测就行"],
       [/实现更高质量的增长/g, "少写空话，多写能让人信的内容"]
     ],
     en: [
@@ -200,7 +202,7 @@ function polishChinese(text, mode) {
 
   if (mode === "strong") {
     result = result
-      .replace(/团队可以先把它用在改稿上/g, "先用它把改稿这步做扎实")
+      .replace(/团队可以先把它用在内容审核上/g, "先用它把文本检测这步做扎实")
       .replace(/它真正有用的地方/g, "它最有用的地方");
   }
 
@@ -284,8 +286,8 @@ function renderNotes(mode, hits) {
   const config = modeConfigs[mode] || modeConfigs.balanced;
   const hitCount = hits.reduce((sum, hit) => sum + hit.count, 0);
   const dynamic = hitCount
-    ? `这次一共命中 ${hitCount} 处“AI 味”表达，主要集中在 ${hits.slice(0, 2).map((hit) => hit.label).join("、")}。`
-    : "这次没有明显模板腔，改写主要在让句子更短、更顺。";
+    ? `${brandName} 这次一共命中 ${hitCount} 处可疑表达，主要集中在 ${hits.slice(0, 2).map((hit) => hit.label).join("、")}。`
+    : "这次没有明显模板腔，文本风险较低。";
 
   rewriteNotesEl.innerHTML = [...config.notes, dynamic]
     .map((note) => `<li>${note}</li>`)
@@ -298,12 +300,12 @@ function run() {
   modeBadgeEl.textContent = (modeConfigs[mode] || modeConfigs.balanced).badge;
 
   if (!text) {
-    outputEl.textContent = "先输入一段草稿。";
+    outputEl.textContent = "先输入一段待检测文本。";
     outputEl.classList.add("empty");
     annotatedEl.textContent = "这里会高亮原稿里的套路表达。";
     annotatedEl.classList.add("empty");
     findingsEl.innerHTML = "<li>输入文字后会列出具体问题。</li>";
-    rewriteNotesEl.innerHTML = "<li>改写后会说明这次主要做了哪些动作。</li>";
+    rewriteNotesEl.innerHTML = "<li>检测后会说明这次主要发现了哪些文本特征。</li>";
     scoreBadgeEl.textContent = "等待输入";
     statsEl.textContent = "0 字符 · 0 句 · 命中 0 处";
     copyHintEl.textContent = "复制后可以直接贴到邮件、帖子或文档里。";
@@ -347,7 +349,7 @@ document.querySelector("#clearBtn").addEventListener("click", () => {
 
 document.querySelector("#copyBtn").addEventListener("click", async () => {
   const text = outputEl.textContent.trim();
-  if (!text || text === "结果会显示在这里。" || text === "先输入一段草稿。") {
+  if (!text || text === "结果会显示在这里。" || text === "先输入一段待检测文本。") {
     copyHintEl.textContent = "先生成结果，再复制。";
     return;
   }

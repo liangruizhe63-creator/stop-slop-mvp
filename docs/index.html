@@ -10,9 +10,9 @@
     <main class="shell">
       <section class="hero">
         <p class="eyebrow">hardikpandya/stop-slop inspired MVP</p>
-        <h1>把“AI 味”草稿改得更像人写</h1>
+        <h1>AI文本检测工具</h1>
         <p class="lede">
-          输入中文或英文草稿，先看它哪里像模板，再按轻度、标准、强力三种模式改写成更像人说的话。
+         粘贴文本，一键分析AI生成概率、重复率和写作特征。
         </p>
         <div class="hero-chips">
           <span>中英文都能演示</span>
@@ -24,7 +24,7 @@
       <section class="workspace">
         <div class="panel input-panel">
           <div class="panel-title">
-            <h2>草稿</h2>
+            <h2>待检测文本</h2>
             <div class="sample-buttons">
               <button type="button" data-sample="zh">中文样例</button>
               <button type="button" data-sample="en">English sample</button>
@@ -33,7 +33,7 @@
 
           <div class="toolbar">
             <label class="mode-picker" for="modeSelect">
-              <span>改写强度</span>
+              <span>检测模式</span>
               <select id="modeSelect">
                 <option value="light">轻度</option>
                 <option value="balanced" selected>标准</option>
@@ -46,14 +46,14 @@
           <textarea id="draft" spellcheck="false"></textarea>
 
           <div class="actions">
-            <button id="rewriteBtn" class="primary" type="button">检测并改写</button>
+            <button id="rewriteBtn" class="primary" type="button">开始检测</button>
             <button id="clearBtn" type="button">清空</button>
           </div>
         </div>
 
         <div class="panel output-panel">
           <div class="panel-title">
-            <h2>自然化版本</h2>
+            <h2>检测结果</h2>
             <div class="output-meta">
               <span id="scoreBadge" class="score-badge">等待输入</span>
               <button id="copyBtn" type="button">复制结果</button>
@@ -67,7 +67,7 @@
       <section class="insights">
         <article class="panel compare-panel">
           <div class="panel-title">
-            <h2>前后对比</h2>
+            <h2>文本分析</h2>
             <span id="modeBadge" class="mode-badge">标准模式</span>
           </div>
           <div class="compare-grid">
@@ -85,14 +85,14 @@
         </article>
 
         <article class="panel">
-          <h2>命中问题</h2>
+          <h2>风险提示</h2>
           <ul id="findings" class="findings">
             <li>输入文字后会列出具体问题。</li>
           </ul>
         </article>
 
         <article class="panel">
-          <h2>五维评分</h2>
+          <h2>AI特征评分</h2>
           <div id="scoreGrid" class="score-grid"></div>
         </article>
 

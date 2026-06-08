@@ -516,11 +516,13 @@ function buildPdfReportHtml(report) {
   `).join("");
 
   const suggestionRows = report.suggestions.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  const disclaimer = "免责声明：本报告基于前端规则与启发式分析生成，仅用于辅助判断文本中的 AI 写作痕迹，不构成最终学术、法律或平台审核结论。";
 
   return `<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>TextTrace AI Text Trace Report</title>
     <style>
       :root {
@@ -690,6 +692,15 @@ function buildPdfReportHtml(report) {
         line-height: 1.7;
         margin: 0 0 8px;
       }
+      .disclaimer {
+        background: var(--soft);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.7;
+        padding: 14px 16px;
+      }
       ul {
         margin: 0;
         padding-left: 18px;
@@ -697,6 +708,12 @@ function buildPdfReportHtml(report) {
       .summary {
         line-height: 1.8;
         white-space: pre-wrap;
+      }
+      @media (max-width: 900px) {
+        .metrics,
+        .two-col {
+          grid-template-columns: 1fr;
+        }
       }
       @page {
         margin: 14mm;
@@ -767,6 +784,11 @@ function buildPdfReportHtml(report) {
         <h2>优化建议</h2>
         <ul>${suggestionRows}</ul>
       </section>
+
+      <section class="section">
+        <h2>免责声明</h2>
+        <div class="disclaimer">${escapeHtml(disclaimer)}</div>
+      </section>
     </main>
   </body>
 </html>`;
@@ -776,17 +798,60 @@ function exportPdfReport(report) {
   const printWindow = window.open("", "_blank", "noopener,noreferrer,width=980,height=760");
   if (!printWindow) {
     copyHintEl.textContent = "浏览器拦截了新窗口，请允许弹窗后再导出 PDF。";
-    return;
+    return false;
   }
 
-  printWindow.document.open();
-  printWindow.document.write(buildPdfReportHtml(report));
-  printWindow.document.close();
+  let html = "";
+  try {
+    html = buildPdfReportHtml(report);
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+  } catch {
+    copyHintEl.textContent = "PDF 报告写入失败，请刷新页面后重试。";
+    try {
+      printWindow.close();
+    } catch {}
+    return false;
+  }
 
-  printWindow.addEventListener("load", () => {
-    printWindow.focus();
-    printWindow.print();
-  }, { once: true });
+  let attempts = 0;
+  const maxAttempts = 40;
+
+  const tryPrint = () => {
+    attempts += 1;
+
+    try {
+      const doc = printWindow.document;
+      const isReady = doc.readyState === "complete" || doc.readyState === "interactive";
+      const hasReport = Boolean(doc.body && doc.body.innerHTML.includes("TextTrace") && doc.body.innerHTML.includes("AI Text Trace Report"));
+
+      if (isReady && hasReport) {
+        printWindow.focus();
+        setTimeout(() => {
+          try {
+            printWindow.print();
+          } catch {
+            copyHintEl.textContent = "打印窗口已打开，但自动打印失败，请手动使用浏览器打印。";
+          }
+        }, 180);
+        return;
+      }
+    } catch {
+      copyHintEl.textContent = "无法访问打印窗口内容，请允许弹窗后重试。";
+      return;
+    }
+
+    if (attempts >= maxAttempts) {
+      copyHintEl.textContent = "PDF 报告没有成功加载，请关闭空白页后重试。";
+      return;
+    }
+
+    setTimeout(tryPrint, 250);
+  };
+
+  setTimeout(tryPrint, 120);
+  return true;
 }
 
 let latestReport = null;
@@ -919,8 +984,10 @@ exportPdfBtnEl.addEventListener("click", () => {
     return;
   }
 
-  exportPdfReport(latestReport);
-  copyHintEl.textContent = "已打开打印窗口，请选择另存为 PDF。";
+  const started = exportPdfReport(latestReport);
+  if (started) {
+    copyHintEl.textContent = "PDF 报告已生成，浏览器会在内容加载完成后打开打印。";
+  }
 });
 
 modeSelectEl.addEventListener("change", run);

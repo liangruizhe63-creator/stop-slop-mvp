@@ -28,6 +28,12 @@ const printReportEl = document.querySelector("#printReport");
 const optimizedTextEl = document.querySelector("#optimizedText");
 const optimizationNotesEl = document.querySelector("#optimizationNotes");
 const comparisonListEl = document.querySelector("#comparisonList");
+const feedbackFabEl = document.querySelector("#feedbackFab");
+const feedbackOverlayEl = document.querySelector("#feedbackOverlay");
+const feedbackPanelEl = document.querySelector("#feedbackPanel");
+const feedbackCloseEl = document.querySelector("#feedbackClose");
+const feedbackQrEl = document.querySelector("#feedbackQr");
+const feedbackQrFallbackEl = document.querySelector("#feedbackQrFallback");
 const exportBtnEl = document.querySelector("#exportBtn");
 const exportPdfBtnEl = document.querySelector("#exportPdfBtn");
 const optimizeBtnEl = document.querySelector("#optimizeBtn");
@@ -843,6 +849,42 @@ function exportPdfReport(report) {
 
 let latestReport = null;
 
+function openFeedbackPanel() {
+  if (!feedbackPanelEl || !feedbackOverlayEl) return;
+  feedbackOverlayEl.hidden = false;
+  feedbackPanelEl.setAttribute("aria-hidden", "false");
+  requestAnimationFrame(() => {
+    feedbackOverlayEl.classList.add("is-open");
+    feedbackPanelEl.classList.add("is-open");
+  });
+}
+
+function closeFeedbackPanel() {
+  if (!feedbackPanelEl || !feedbackOverlayEl) return;
+  feedbackOverlayEl.classList.remove("is-open");
+  feedbackPanelEl.classList.remove("is-open");
+  feedbackPanelEl.setAttribute("aria-hidden", "true");
+  setTimeout(() => {
+    if (!feedbackOverlayEl.classList.contains("is-open")) {
+      feedbackOverlayEl.hidden = true;
+    }
+  }, 180);
+}
+
+function initFeedbackQr() {
+  if (!feedbackQrEl || !feedbackQrFallbackEl) return;
+
+  feedbackQrEl.addEventListener("error", () => {
+    feedbackQrEl.hidden = true;
+    feedbackQrFallbackEl.hidden = false;
+  });
+
+  feedbackQrEl.addEventListener("load", () => {
+    feedbackQrEl.hidden = false;
+    feedbackQrFallbackEl.hidden = true;
+  });
+}
+
 function run() {
   const text = draftEl.value.trim();
   const mode = modeSelectEl.value;
@@ -1015,10 +1057,21 @@ exportPdfBtnEl.addEventListener("click", () => {
   }
 });
 
+feedbackFabEl?.addEventListener("click", openFeedbackPanel);
+feedbackCloseEl?.addEventListener("click", closeFeedbackPanel);
+feedbackOverlayEl?.addEventListener("click", closeFeedbackPanel);
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && feedbackPanelEl?.classList.contains("is-open")) {
+    closeFeedbackPanel();
+  }
+});
+
 modeSelectEl.addEventListener("change", run);
 
 renderLegend();
 renderHistory();
 resetOptimizationViews();
+initFeedbackQr();
 draftEl.value = samples.zh;
 run();

@@ -261,6 +261,29 @@
 
     <div id="printReport" aria-hidden="true"></div>
 
+    <button id="feedbackFab" class="feedback-fab" type="button" aria-haspopup="dialog" aria-controls="feedbackPanel">
+      <span class="feedback-fab-icon">💬</span>
+      <span>意见反馈</span>
+    </button>
+
+    <div id="feedbackOverlay" class="feedback-overlay" hidden></div>
+    <aside id="feedbackPanel" class="feedback-panel" aria-hidden="true" aria-labelledby="feedbackTitle">
+      <button id="feedbackClose" class="feedback-close" type="button" aria-label="关闭反馈面板">×</button>
+      <p class="section-kicker">Feedback</p>
+      <h2 id="feedbackTitle">意见反馈</h2>
+      <p class="feedback-copy">
+        如果你发现检测结果异常、想提出功能建议，或者有合作想法，欢迎联系作者。
+      </p>
+      <div class="feedback-qr-wrap">
+        <img id="feedbackQr" class="feedback-qr" src="./wechat-qr.png" alt="TextTrace 微信反馈二维码" />
+        <div id="feedbackQrFallback" class="feedback-qr-fallback" hidden>请上传 docs/wechat-qr.png</div>
+      </div>
+      <div class="feedback-meta">
+        <strong>扫码添加微信</strong>
+        <span>备注：TextTrace反馈</span>
+      </div>
+    </aside>
+
     <script src="./app.js"></script>
   </body>
 </html>

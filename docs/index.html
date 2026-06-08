@@ -9,20 +9,23 @@
   <body>
     <main class="shell">
       <section class="hero">
-        <p class="eyebrow">TextTrace</p>
-        <h1>TextTrace</h1>
-        <p class="lede">AI文本检测工具</p>
-        <div class="hero-chips">
-          <span>中英文都能演示</span>
-          <span>风险特征可视化</span>
-          <span>一键复制结果</span>
+        <div class="brand-lockup">
+          <p class="eyebrow">AI TEXT TRACE REPORT</p>
+          <h1>TextTrace</h1>
+          <p class="subhead">AI文本检测工具</p>
+          <p class="lede">
+            分析文本中的 AI 写作痕迹、模板化表达、重复结构与概率风险。
+          </p>
         </div>
       </section>
 
       <section class="workspace">
         <div class="panel input-panel">
-          <div class="panel-title">
-            <h2>待检测文本</h2>
+          <div class="panel-header">
+            <div>
+              <p class="section-kicker">Input</p>
+              <h2>待检测文本</h2>
+            </div>
             <div class="sample-buttons">
               <button type="button" data-sample="zh">中文样例</button>
               <button type="button" data-sample="en">English sample</button>
@@ -49,54 +52,151 @@
           </div>
         </div>
 
-        <div class="panel output-panel">
-          <div class="panel-title">
-            <h2>检测结果</h2>
-            <div class="output-meta">
-              <span id="scoreBadge" class="score-badge">等待输入</span>
+        <div class="panel report-panel">
+          <div class="panel-header">
+            <div>
+              <p class="section-kicker">Report</p>
+              <h2>检测报告</h2>
+            </div>
+            <div class="report-actions">
+              <span id="riskBadge" class="risk-badge risk-neutral">等待检测</span>
               <button id="copyBtn" type="button">复制结果</button>
             </div>
           </div>
-          <div id="output" class="output empty">结果会显示在这里。</div>
-          <p id="copyHint" class="copy-hint">复制后可以直接贴到邮件、帖子或文档里。</p>
+
+          <div class="probability-board">
+            <div class="ring-wrap">
+              <div class="ring-shell">
+                <div id="probabilityRing" class="ring" style="--progress: 0deg;">
+                  <div class="ring-inner">
+                    <strong id="aiProbability">0%</strong>
+                    <span>AI概率</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="probability-stats">
+              <div class="metric-card emphasis">
+                <span>AI生成概率</span>
+                <strong id="aiRate">0%</strong>
+              </div>
+              <div class="metric-card">
+                <span>人类写作概率</span>
+                <strong id="humanRate">100%</strong>
+              </div>
+              <div class="metric-card">
+                <span>风险等级</span>
+                <strong id="riskLevel">待检测</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="progress-block">
+            <div class="progress-meta">
+              <span>AI率</span>
+              <span id="progressLabel">0%</span>
+            </div>
+            <div class="progress-track">
+              <span id="progressFill" class="progress-fill"></span>
+            </div>
+          </div>
+
+          <div class="stats-grid">
+            <article class="stat-tile">
+              <span>字数</span>
+              <strong id="wordCount">0</strong>
+            </article>
+            <article class="stat-tile">
+              <span>句子数</span>
+              <strong id="sentenceCount">0</strong>
+            </article>
+            <article class="stat-tile">
+              <span>平均句长</span>
+              <strong id="averageLength">0</strong>
+            </article>
+            <article class="stat-tile">
+              <span>命中规则数</span>
+              <strong id="ruleCount">0</strong>
+            </article>
+          </div>
+
+          <div class="report-output">
+            <div class="report-output-head">
+              <h3>检测摘要</h3>
+              <span id="scoreBadge" class="score-badge">等待输入</span>
+            </div>
+            <div id="output" class="output empty">结果会显示在这里。</div>
+            <p id="copyHint" class="copy-hint">复制后可以直接贴到邮件、帖子或文档里。</p>
+          </div>
         </div>
       </section>
 
-      <section class="insights">
-        <article class="panel compare-panel">
-          <div class="panel-title">
-            <h2>文本分析</h2>
+      <section class="analysis-grid">
+        <article class="panel">
+          <div class="panel-header compact">
+            <div>
+              <p class="section-kicker">Signals</p>
+              <h2>AI风险特征</h2>
+            </div>
             <span id="modeBadge" class="mode-badge">标准模式</span>
           </div>
-          <div class="compare-grid">
-            <div>
-              <h3>原稿标注</h3>
-              <div id="annotated" class="output empty">这里会高亮原稿里的套路表达。</div>
-            </div>
-            <div>
-              <h3>检测说明</h3>
-              <ul id="rewriteNotes" class="findings">
-                <li>检测后会说明这次主要发现了哪些文本特征。</li>
-              </ul>
-            </div>
-          </div>
-        </article>
-
-        <article class="panel">
-          <h2>风险提示</h2>
-          <ul id="findings" class="findings">
+          <ul id="findings" class="detail-list">
             <li>输入文字后会列出具体问题。</li>
           </ul>
         </article>
 
         <article class="panel">
-          <h2>AI特征评分</h2>
+          <div class="panel-header compact">
+            <div>
+              <p class="section-kicker">Scores</p>
+              <h2>AI特征评分</h2>
+            </div>
+          </div>
           <div id="scoreGrid" class="score-grid"></div>
         </article>
 
         <article class="panel">
-          <h2>规则说明</h2>
-          <div id="ruleLegend" class="legend-grid"></div>
+          <div class="panel-header compact">
+            <div>
+              <p class="section-kicker">Advice</p>
+              <h2>优化建议</h2>
+            </div>
+          </div>
+          <ul id="rewriteNotes" class="detail-list">
+            <li>检测后会说明这次主要发现了哪些文本特征。</li>
+          </ul>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header compact">
+            <div>
+              <p class="section-kicker">History</p>
+              <h2>历史检测记录</h2>
+            </div>
+          </div>
+          <div id="historyList" class="history-list">
+            <div class="history-empty">还没有检测记录。</div>
+          </div>
+        </article>
+
+        <article class="panel wide">
+          <div class="panel-header compact">
+            <div>
+              <p class="section-kicker">Trace</p>
+              <h2>文本分析</h2>
+            </div>
+          </div>
+          <div class="trace-grid">
+            <div>
+              <h3>原稿标注</h3>
+              <div id="annotated" class="output empty">这里会高亮原稿里的风险表达。</div>
+            </div>
+            <div>
+              <h3>规则说明</h3>
+              <div id="ruleLegend" class="legend-grid"></div>
+            </div>
+          </div>
         </article>
       </section>
     </main>

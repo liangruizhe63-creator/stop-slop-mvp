@@ -10,59 +10,73 @@ const statsEl = document.querySelector("#stats");
 const ruleLegendEl = document.querySelector("#ruleLegend");
 const modeSelectEl = document.querySelector("#modeSelect");
 const copyHintEl = document.querySelector("#copyHint");
+const aiProbabilityEl = document.querySelector("#aiProbability");
+const aiRateEl = document.querySelector("#aiRate");
+const humanRateEl = document.querySelector("#humanRate");
+const riskLevelEl = document.querySelector("#riskLevel");
+const riskBadgeEl = document.querySelector("#riskBadge");
+const probabilityRingEl = document.querySelector("#probabilityRing");
+const progressFillEl = document.querySelector("#progressFill");
+const progressLabelEl = document.querySelector("#progressLabel");
+const wordCountEl = document.querySelector("#wordCount");
+const sentenceCountEl = document.querySelector("#sentenceCount");
+const averageLengthEl = document.querySelector("#averageLength");
+const ruleCountEl = document.querySelector("#ruleCount");
+const historyListEl = document.querySelector("#historyList");
+
+const brandName = "TextTrace";
+const historyKey = "texttrace-history";
 
 const samples = {
   zh: `在当今快速变化的时代，人工智能正在深刻地改变内容创作的方式。值得注意的是，这不仅仅是一次技术升级，更是一场关于表达效率的革命。本文将深入探讨为什么企业应该积极拥抱这项能力，以及它如何帮助团队实现更高质量的增长。`,
   en: `In today's fast-paced digital landscape, it is important to note that AI is not just a tool, but a transformative force. This article will explore how teams can leverage it to unlock efficiency, drive innovation, and achieve meaningful outcomes.`
 };
 
-const brandName = "TextTrace";
-
 const rules = [
   {
     label: "中文开场套话",
     pattern: /(在当今|快速变化|时代|值得注意的是|本文将|深入探讨|积极拥抱)/g,
-    reason: "像文章模板开头，先删掉铺垫。",
+    reason: "文章开头过于像模板，容易拉高 AI 风险判断。",
     weight: 2
   },
   {
     label: "英文开场套话",
     pattern: /(in today's|fast-paced|digital landscape|it is important to note that|this article will|explore how|unlock|drive innovation|meaningful outcomes)/gi,
-    reason: "常见 AI 文章语气，读者会先听见模板。",
+    reason: "常见于自动生成内容的引导句和总结句。",
     weight: 2
   },
   {
     label: "二元对照句式",
     pattern: /(不仅仅是|不只是|not just|not only|but also|更是|but a)/gi,
-    reason: "先说否定再揭示答案，会显得公式化。",
+    reason: "先否定再揭示结论的句式过多，会显得程式化。",
     weight: 2
   },
   {
     label: "空泛强词",
     pattern: /(深刻地|显著地|全面地|极大地|transformative|revolutionary|seamlessly|significantly)/gi,
-    reason: "副词和大词没有给出具体信息。",
+    reason: "强调词多但信息密度不够，容易显得空。",
     weight: 1
   },
   {
     label: "商业抽象词",
     pattern: /(赋能|增长|效率|升级|革命|能力|leverage|efficiency|innovation|outcomes|capabilities)/gi,
-    reason: "抽象词过密，需要换成具体动作或结果。",
+    reason: "抽象词密度高时，文本更像包装过的生成内容。",
     weight: 1
   },
   {
     label: "被动或远景旁白",
     pattern: /(正在被|被.+?改变|is being|are being|has been|have been)/gi,
-    reason: "读起来像旁白。找到人，让人做动作。",
+    reason: "旁白式叙述偏多，常见于自动扩写文本。",
     weight: 2
   }
 ];
 
 const dimensions = [
-  ["Directness", "直接说事，不宣布要说事"],
-  ["Rhythm", "句长有变化，不像模板"],
-  ["Trust", "不替读者做过多解释"],
-  ["Authenticity", "像具体的人在说话"],
-  ["Density", "删掉可删内容"]
+  ["Directness", "是否直接进入主题"],
+  ["Rhythm", "句长与节奏是否单一"],
+  ["Trust", "表达是否过度包装"],
+  ["Authenticity", "是否像真实作者写出"],
+  ["Density", "信息密度是否偏低"]
 ];
 
 const modeConfigs = {
@@ -275,23 +289,130 @@ function renderLegend() {
   `).join("");
 }
 
-function renderStats(text, hits) {
-  const chars = text.length;
-  const sentences = text.split(/[。！？.!?]+/).map((part) => part.trim()).filter(Boolean).length || 1;
-  const hitCount = hits.reduce((sum, hit) => sum + hit.count, 0);
-  statsEl.textContent = `${chars} 字符 · ${sentences} 句 · 命中 ${hitCount} 处`;
+function getSentenceCount(text) {
+  return text.split(/[。！？.!?]+/).map((part) => part.trim()).filter(Boolean).length || 1;
 }
 
-function renderNotes(mode, hits) {
+function getWordCount(text) {
+  const hasChinese = /[\u4e00-\u9fa5]/.test(text);
+  if (hasChinese) {
+    return (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+  }
+  return text.trim() ? text.trim().split(/\s+/).length : 0;
+}
+
+function getAverageLength(text) {
+  const sentences = getSentenceCount(text);
+  return sentences ? Math.round(text.length / sentences) : 0;
+}
+
+function getRiskMeta(aiProbability) {
+  if (aiProbability >= 75) {
+    return {
+      level: "高风险",
+      className: "risk-high",
+      color: "#ef4444"
+    };
+  }
+
+  if (aiProbability >= 45) {
+    return {
+      level: "中风险",
+      className: "risk-mid",
+      color: "#f59e0b"
+    };
+  }
+
+  return {
+    level: "低风险",
+    className: "risk-low",
+    color: "#16a34a"
+  };
+}
+
+function computeProbabilities(text, hits, scores, mode) {
+  const modeFactor = mode === "light" ? 0.95 : mode === "strong" ? 1.1 : 1;
+  const penalty = hits.reduce((sum, hit) => sum + hit.count * hit.weight, 0);
+  const averageScore = scores.reduce((sum, item) => sum + item.value, 0) / scores.length;
+  const baseline = penalty * 6 + Math.max(0, 8 - averageScore) * 5;
+  const punctuationFactor = text.split(/[。！？.!?]+/).filter(Boolean).length <= 2 ? 5 : 0;
+  const aiProbability = Math.max(6, Math.min(97, Math.round((baseline + punctuationFactor) * modeFactor)));
+  return {
+    ai: aiProbability,
+    human: 100 - aiProbability
+  };
+}
+
+function renderStats(text, hits) {
+  const chars = text.length;
+  const sentences = getSentenceCount(text);
+  const hitCount = hits.reduce((sum, hit) => sum + hit.count, 0);
+  statsEl.textContent = `${chars} 字符 · ${sentences} 句 · ${hitCount} 条规则命中`;
+  wordCountEl.textContent = `${getWordCount(text)}`;
+  sentenceCountEl.textContent = `${sentences}`;
+  averageLengthEl.textContent = `${getAverageLength(text)}`;
+  ruleCountEl.textContent = `${hitCount}`;
+}
+
+function renderNotes(mode, hits, aiProbability) {
   const config = modeConfigs[mode] || modeConfigs.balanced;
   const hitCount = hits.reduce((sum, hit) => sum + hit.count, 0);
   const dynamic = hitCount
-    ? `${brandName} 这次一共命中 ${hitCount} 处可疑表达，主要集中在 ${hits.slice(0, 2).map((hit) => hit.label).join("、")}。`
-    : "这次没有明显模板腔，文本风险较低。";
+    ? `${brandName} 本次识别到 ${hitCount} 处可疑表达，AI 风险概率约为 ${aiProbability}%，主要集中在 ${hits.slice(0, 2).map((hit) => hit.label).join("、")}。`
+    : `${brandName} 没有识别到明显模板腔，当前文本风险较低。`;
 
-  rewriteNotesEl.innerHTML = [...config.notes, dynamic]
+  const suggestions = aiProbability >= 75
+    ? "建议优先重写开头和总结句，减少抽象词与模板结构。"
+    : aiProbability >= 45
+      ? "建议压缩空泛修饰词，并补充更具体的主语和动作。"
+      : "建议继续补充事实细节，保持当前自然表达。";
+
+  rewriteNotesEl.innerHTML = [...config.notes, dynamic, suggestions]
     .map((note) => `<li>${note}</li>`)
     .join("");
+}
+
+function renderHistory() {
+  const history = JSON.parse(localStorage.getItem(historyKey) || "[]");
+  if (!history.length) {
+    historyListEl.innerHTML = '<div class="history-empty">还没有检测记录。</div>';
+    return;
+  }
+
+  historyListEl.innerHTML = history.slice(0, 5).map((item) => `
+    <article class="history-item">
+      <strong>${item.ai}% AI · ${item.level}</strong>
+      <div>${item.preview}</div>
+      <div>${item.meta}</div>
+    </article>
+  `).join("");
+}
+
+function saveHistory(text, aiProbability, riskMeta) {
+  const history = JSON.parse(localStorage.getItem(historyKey) || "[]");
+  history.unshift({
+    ai: aiProbability,
+    level: riskMeta.level,
+    preview: `${text.slice(0, 52)}${text.length > 52 ? "..." : ""}`,
+    meta: `${new Date().toLocaleString("zh-CN")}`
+  });
+  localStorage.setItem(historyKey, JSON.stringify(history.slice(0, 8)));
+}
+
+function renderRisk(probabilities) {
+  const riskMeta = getRiskMeta(probabilities.ai);
+  aiProbabilityEl.textContent = `${probabilities.ai}%`;
+  aiRateEl.textContent = `${probabilities.ai}%`;
+  humanRateEl.textContent = `${probabilities.human}%`;
+  riskLevelEl.textContent = riskMeta.level;
+  progressLabelEl.textContent = `${probabilities.ai}%`;
+  probabilityRingEl.style.setProperty("--progress", `${Math.round(probabilities.ai * 3.6)}deg`);
+  probabilityRingEl.style.setProperty("--ring-color", riskMeta.color);
+  progressFillEl.style.width = `${probabilities.ai}%`;
+  progressFillEl.style.background = riskMeta.color;
+  riskBadgeEl.className = `risk-badge ${riskMeta.className}`;
+  riskBadgeEl.textContent = riskMeta.level;
+  return riskMeta;
 }
 
 function run() {
@@ -302,14 +423,30 @@ function run() {
   if (!text) {
     outputEl.textContent = "先输入一段待检测文本。";
     outputEl.classList.add("empty");
-    annotatedEl.textContent = "这里会高亮原稿里的套路表达。";
+    annotatedEl.textContent = "这里会高亮原稿里的风险表达。";
     annotatedEl.classList.add("empty");
     findingsEl.innerHTML = "<li>输入文字后会列出具体问题。</li>";
     rewriteNotesEl.innerHTML = "<li>检测后会说明这次主要发现了哪些文本特征。</li>";
     scoreBadgeEl.textContent = "等待输入";
     statsEl.textContent = "0 字符 · 0 句 · 命中 0 处";
     copyHintEl.textContent = "复制后可以直接贴到邮件、帖子或文档里。";
+    aiProbabilityEl.textContent = "0%";
+    aiRateEl.textContent = "0%";
+    humanRateEl.textContent = "100%";
+    riskLevelEl.textContent = "待检测";
+    progressLabelEl.textContent = "0%";
+    wordCountEl.textContent = "0";
+    sentenceCountEl.textContent = "0";
+    averageLengthEl.textContent = "0";
+    ruleCountEl.textContent = "0";
+    probabilityRingEl.style.setProperty("--progress", "0deg");
+    probabilityRingEl.style.setProperty("--ring-color", "#9ca3af");
+    progressFillEl.style.width = "0%";
+    progressFillEl.style.background = "#9ca3af";
+    riskBadgeEl.className = "risk-badge risk-neutral";
+    riskBadgeEl.textContent = "等待检测";
     renderScores(dimensions.map(([name, hint]) => ({ name, hint, value: 0 })));
+    renderHistory();
     return;
   }
 
@@ -317,6 +454,8 @@ function run() {
   const rewritten = rewrite(text, mode);
   const scores = score(text, hits, mode);
   const total = scores.reduce((sum, item) => sum + item.value, 0);
+  const probabilities = computeProbabilities(text, hits, scores, mode);
+  const riskMeta = renderRisk(probabilities);
 
   outputEl.innerHTML = highlight(rewritten, []);
   outputEl.classList.remove("empty");
@@ -327,11 +466,13 @@ function run() {
 
   findingsEl.innerHTML = hits.length
     ? hits.map((hit) => `<li><strong>${hit.label}</strong>：命中 ${hit.count} 处，例子：${hit.examples.map(escapeHtml).join("、")}。${hit.reason}</li>`).join("")
-    : "<li>没有明显套话。可以再检查事实是否具体。</li>";
+    : "<li>没有明显套话。可以继续关注事实密度与句式变化。</li>";
 
   renderScores(scores);
-  renderNotes(mode, hits);
+  renderNotes(mode, hits, probabilities.ai);
   renderStats(text, hits);
+  saveHistory(text, probabilities.ai, riskMeta);
+  renderHistory();
 }
 
 document.querySelectorAll("[data-sample]").forEach((button) => {
@@ -365,5 +506,6 @@ document.querySelector("#copyBtn").addEventListener("click", async () => {
 modeSelectEl.addEventListener("change", run);
 
 renderLegend();
+renderHistory();
 draftEl.value = samples.zh;
 run();

@@ -24,6 +24,7 @@ const primaryRiskEl = document.querySelector("#primaryRisk");
 const sourceBreakdownEl = document.querySelector("#sourceBreakdown");
 const personaGridEl = document.querySelector("#personaGrid");
 const historyListEl = document.querySelector("#historyList");
+const printReportEl = document.querySelector("#printReport");
 const exportBtnEl = document.querySelector("#exportBtn");
 const exportPdfBtnEl = document.querySelector("#exportPdfBtn");
 const analyzeBtnEl = document.querySelector("#analyzeBtn");
@@ -495,260 +496,53 @@ function buildPdfReportHtml(report) {
     { label: "细节度", value: report.persona.detail },
     { label: "人味度", value: report.persona.humanity }
   ].map((item) => `
-    <div class="persona-row">
-      <div class="persona-meta">
+    <div class="print-persona-row">
+      <div class="print-persona-meta">
         <span>${item.label}</span>
         <strong>${item.value}%</strong>
       </div>
-      <div class="persona-track"><span style="width:${item.value}%"></span></div>
+      <div class="print-persona-track"><span style="width:${item.value}%"></span></div>
     </div>
   `).join("");
 
   const sentenceRows = report.sentenceProfiles.map((sentence, index) => `
-    <div class="sentence-item ${sentence.level}">
-      <div class="sentence-top">
+    <div class="print-sentence-item ${sentence.level}">
+      <div class="print-sentence-top">
         <strong>句子 ${index + 1}</strong>
         <span>${sentence.level === "high" ? "高风险" : sentence.level === "mid" ? "中风险" : "低风险"}</span>
       </div>
       <p>${escapeHtml(sentence.text)}</p>
-      <div class="reason-line">原因：${sentence.reasons.join("、")}</div>
+      <div class="print-reason">原因：${sentence.reasons.join("、")}</div>
     </div>
   `).join("");
 
   const suggestionRows = report.suggestions.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   const disclaimer = "免责声明：本报告基于前端规则与启发式分析生成，仅用于辅助判断文本中的 AI 写作痕迹，不构成最终学术、法律或平台审核结论。";
 
-  return `<!doctype html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>TextTrace AI Text Trace Report</title>
-    <style>
-      :root {
-        --ink: #111111;
-        --muted: #5b6470;
-        --border: #d9dde3;
-        --brand: #0f766e;
-        --soft: #f5f7f8;
-        --high: #ef4444;
-        --mid: #f59e0b;
-        --low: #16a34a;
-      }
-      * { box-sizing: border-box; }
-      body {
-        color: var(--ink);
-        font-family: "Inter", "Segoe UI", Arial, sans-serif;
-        margin: 0;
-        background: #ffffff;
-      }
-      .report {
-        margin: 0 auto;
-        max-width: 960px;
-        padding: 40px 36px 56px;
-      }
-      .cover {
-        border-bottom: 2px solid var(--brand);
-        margin-bottom: 28px;
-        padding-bottom: 20px;
-      }
-      .logo-row {
-        align-items: center;
-        display: flex;
-        gap: 14px;
-        margin-bottom: 12px;
-      }
-      .logo-mark {
-        align-items: center;
-        background: var(--brand);
-        border-radius: 14px;
-        color: #ffffff;
-        display: flex;
-        font-size: 20px;
-        font-weight: 800;
-        height: 46px;
-        justify-content: center;
-        width: 46px;
-      }
-      .logo-copy h1 {
-        font-size: 28px;
-        letter-spacing: -0.04em;
-        margin: 0;
-      }
-      .logo-copy p {
-        color: var(--muted);
-        margin: 4px 0 0;
-      }
-      .report-title {
-        font-size: 13px;
-        font-weight: 700;
-        letter-spacing: 0.16em;
-        margin: 0;
-        text-transform: uppercase;
-      }
-      .meta {
-        color: var(--muted);
-        font-size: 14px;
-        margin-top: 12px;
-      }
-      .grid {
-        display: grid;
-        gap: 14px;
-      }
-      .metrics {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        margin-bottom: 28px;
-      }
-      .card, .table-card, .section {
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        overflow: hidden;
-      }
-      .card {
-        padding: 16px 18px;
-      }
-      .card span {
-        color: var(--muted);
-        display: block;
-        font-size: 12px;
-        margin-bottom: 8px;
-        text-transform: uppercase;
-      }
-      .card strong {
-        font-size: 28px;
-      }
-      .section {
-        margin-bottom: 22px;
-        padding: 18px 20px;
-      }
-      .section h2 {
-        font-size: 18px;
-        margin: 0 0 14px;
-      }
-      .stats-table, .source-table {
-        border-collapse: collapse;
-        width: 100%;
-      }
-      .stats-table td, .source-table td {
-        border-top: 1px solid var(--border);
-        padding: 10px 0;
-      }
-      .stats-table tr:first-child td, .source-table tr:first-child td {
-        border-top: 0;
-      }
-      .stats-table td:first-child, .source-table td:first-child {
-        color: var(--muted);
-        width: 40%;
-      }
-      .two-col {
-        display: grid;
-        gap: 18px;
-        grid-template-columns: 1.15fr 0.85fr;
-      }
-      .persona-row + .persona-row {
-        margin-top: 12px;
-      }
-      .persona-meta {
-        align-items: center;
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 6px;
-      }
-      .persona-track {
-        background: #e7ebef;
-        border-radius: 999px;
-        height: 8px;
-        overflow: hidden;
-      }
-      .persona-track span {
-        background: var(--brand);
-        display: block;
-        height: 100%;
-      }
-      .sentence-item {
-        border: 1px solid var(--border);
-        border-left-width: 4px;
-        border-radius: 14px;
-        margin-bottom: 12px;
-        padding: 14px 16px;
-        page-break-inside: avoid;
-      }
-      .sentence-item.high { border-left-color: var(--high); }
-      .sentence-item.mid { border-left-color: var(--mid); }
-      .sentence-item.low { border-left-color: var(--low); }
-      .sentence-top {
-        align-items: center;
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 8px;
-      }
-      .sentence-top span,
-      .reason-line,
-      .summary,
-      li {
-        color: var(--muted);
-      }
-      .sentence-item p {
-        line-height: 1.7;
-        margin: 0 0 8px;
-      }
-      .disclaimer {
-        background: var(--soft);
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        color: var(--muted);
-        font-size: 13px;
-        line-height: 1.7;
-        padding: 14px 16px;
-      }
-      ul {
-        margin: 0;
-        padding-left: 18px;
-      }
-      .summary {
-        line-height: 1.8;
-        white-space: pre-wrap;
-      }
-      @media (max-width: 900px) {
-        .metrics,
-        .two-col {
-          grid-template-columns: 1fr;
-        }
-      }
-      @page {
-        margin: 14mm;
-        size: A4;
-      }
-      @media print {
-        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .report { padding: 0; }
-      }
-    </style>
-  </head>
-  <body>
-    <main class="report">
-      <section class="cover">
-        <p class="report-title">AI Text Trace Report</p>
-        <div class="logo-row">
-          <div class="logo-mark">TT</div>
-          <div class="logo-copy">
+  return `
+    <main class="print-report">
+      <section class="print-cover">
+        <p class="print-report-title">AI Text Trace Report</p>
+        <div class="print-logo-row">
+          <div class="print-logo-mark">TT</div>
+          <div class="print-brand">
             <h1>TextTrace</h1>
             <p>AI Text Trace Report</p>
           </div>
         </div>
-        <div class="meta">检测时间：${report.generatedAt}</div>
+        <div class="print-meta">检测时间：${report.generatedAt}</div>
       </section>
 
-      <section class="grid metrics">
-        <article class="card"><span>AI生成概率</span><strong>${report.probabilities.ai}%</strong></article>
-        <article class="card"><span>人类写作概率</span><strong>${report.probabilities.human}%</strong></article>
-        <article class="card"><span>风险等级</span><strong>${report.riskMeta.level}</strong></article>
-        <article class="card"><span>高风险句子</span><strong>${report.highRiskCount}</strong></article>
+      <section class="print-grid print-metrics">
+        <article class="print-card"><span>AI生成概率</span><strong>${report.probabilities.ai}%</strong></article>
+        <article class="print-card"><span>人类写作概率</span><strong>${report.probabilities.human}%</strong></article>
+        <article class="print-card"><span>风险等级</span><strong>${report.riskMeta.level}</strong></article>
+        <article class="print-card"><span>高风险句子</span><strong>${report.highRiskCount}</strong></article>
       </section>
 
-      <section class="section">
+      <section class="print-section">
         <h2>文本统计</h2>
-        <table class="stats-table">
+        <table class="print-table">
           <tr><td>字数</td><td>${report.stats.words}</td></tr>
           <tr><td>句子数</td><td>${report.stats.sentences}</td></tr>
           <tr><td>平均句长</td><td>${report.stats.averageLength}</td></tr>
@@ -757,100 +551,73 @@ function buildPdfReportHtml(report) {
         </table>
       </section>
 
-      <section class="two-col">
-        <section class="section">
+      <section class="print-two-col">
+        <section class="print-section">
           <h2>风险来源分析</h2>
-          <table class="source-table">
+          <table class="print-table">
             ${sourceRows}
           </table>
         </section>
-        <section class="section">
+        <section class="print-section">
           <h2>AI写作画像</h2>
           ${personaRows}
         </section>
       </section>
 
-      <section class="section">
+      <section class="print-section">
         <h2>检测摘要</h2>
-        <div class="summary">${escapeHtml(report.summary)}</div>
+        <div class="print-summary">${escapeHtml(report.summary)}</div>
       </section>
 
-      <section class="section">
+      <section class="print-section">
         <h2>逐句分析</h2>
         ${sentenceRows}
       </section>
 
-      <section class="section">
+      <section class="print-section">
         <h2>优化建议</h2>
-        <ul>${suggestionRows}</ul>
+        <ul class="print-list">${suggestionRows}</ul>
       </section>
 
-      <section class="section">
+      <section class="print-section">
         <h2>免责声明</h2>
-        <div class="disclaimer">${escapeHtml(disclaimer)}</div>
+        <div class="print-disclaimer">${escapeHtml(disclaimer)}</div>
       </section>
-    </main>
-  </body>
-</html>`;
+    </main>`;
 }
 
 function exportPdfReport(report) {
-  const printWindow = window.open("", "_blank", "noopener,noreferrer,width=980,height=760");
-  if (!printWindow) {
-    copyHintEl.textContent = "浏览器拦截了新窗口，请允许弹窗后再导出 PDF。";
+  if (!printReportEl) {
+    copyHintEl.textContent = "打印区域初始化失败，请刷新页面后重试。";
     return false;
   }
 
-  let html = "";
   try {
-    html = buildPdfReportHtml(report);
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
+    printReportEl.innerHTML = buildPdfReportHtml(report);
+    printReportEl.setAttribute("aria-hidden", "false");
   } catch {
     copyHintEl.textContent = "PDF 报告写入失败，请刷新页面后重试。";
-    try {
-      printWindow.close();
-    } catch {}
     return false;
   }
 
-  let attempts = 0;
-  const maxAttempts = 40;
-
-  const tryPrint = () => {
-    attempts += 1;
-
-    try {
-      const doc = printWindow.document;
-      const isReady = doc.readyState === "complete" || doc.readyState === "interactive";
-      const hasReport = Boolean(doc.body && doc.body.innerHTML.includes("TextTrace") && doc.body.innerHTML.includes("AI Text Trace Report"));
-
-      if (isReady && hasReport) {
-        printWindow.focus();
-        setTimeout(() => {
-          try {
-            printWindow.print();
-          } catch {
-            copyHintEl.textContent = "打印窗口已打开，但自动打印失败，请手动使用浏览器打印。";
-          }
-        }, 180);
-        return;
-      }
-    } catch {
-      copyHintEl.textContent = "无法访问打印窗口内容，请允许弹窗后重试。";
-      return;
-    }
-
-    if (attempts >= maxAttempts) {
-      copyHintEl.textContent = "PDF 报告没有成功加载，请关闭空白页后重试。";
-      return;
-    }
-
-    setTimeout(tryPrint, 250);
+  const cleanupPrintMode = () => {
+    document.body.classList.remove("printing");
+    printReportEl.setAttribute("aria-hidden", "true");
+    window.removeEventListener("afterprint", cleanupPrintMode);
   };
 
-  setTimeout(tryPrint, 120);
+  window.addEventListener("afterprint", cleanupPrintMode, { once: true });
+  document.body.classList.add("printing");
+
+  setTimeout(() => {
+    try {
+      window.print();
+    } catch {
+      cleanupPrintMode();
+      copyHintEl.textContent = "浏览器未能打开打印面板，请检查打印权限后重试。";
+    }
+  }, 120);
+
   return true;
 }
 

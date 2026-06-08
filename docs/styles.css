@@ -594,6 +594,229 @@ textarea {
   white-space: nowrap;
 }
 
+#printReport {
+  display: none;
+}
+
+.print-report {
+  background: #ffffff;
+  color: #111111;
+  margin: 0 auto;
+  max-width: 960px;
+  padding: 40px 36px 56px;
+}
+
+.print-cover {
+  border-bottom: 2px solid #0f766e;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+}
+
+.print-report-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  margin: 0 0 14px;
+  text-transform: uppercase;
+}
+
+.print-logo-row {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.print-logo-mark {
+  align-items: center;
+  background: #0f766e;
+  border-radius: 14px;
+  color: #ffffff;
+  display: flex;
+  font-size: 20px;
+  font-weight: 800;
+  height: 46px;
+  justify-content: center;
+  width: 46px;
+}
+
+.print-brand h1 {
+  color: #111111;
+  font-size: 28px;
+  letter-spacing: -0.04em;
+  margin: 0;
+}
+
+.print-brand p,
+.print-meta,
+.print-table td:first-child,
+.print-sentence-top span,
+.print-reason,
+.print-summary,
+.print-list li,
+.print-disclaimer {
+  color: #5b6470;
+}
+
+.print-brand p {
+  margin: 4px 0 0;
+}
+
+.print-meta {
+  font-size: 14px;
+}
+
+.print-grid,
+.print-metrics,
+.print-two-col {
+  display: grid;
+  gap: 14px;
+}
+
+.print-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 28px;
+}
+
+.print-two-col {
+  gap: 18px;
+  grid-template-columns: 1.15fr 0.85fr;
+}
+
+.print-card,
+.print-section,
+.print-sentence-item {
+  border: 1px solid #d9dde3;
+  border-radius: 16px;
+}
+
+.print-card {
+  padding: 16px 18px;
+}
+
+.print-card span {
+  color: #5b6470;
+  display: block;
+  font-size: 12px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.print-card strong {
+  color: #111111;
+  font-size: 28px;
+}
+
+.print-section {
+  margin-bottom: 22px;
+  padding: 18px 20px;
+}
+
+.print-section h2 {
+  color: #111111;
+  font-size: 18px;
+  margin: 0 0 14px;
+}
+
+.print-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.print-table td {
+  border-top: 1px solid #d9dde3;
+  color: #111111;
+  padding: 10px 0;
+}
+
+.print-table tr:first-child td {
+  border-top: 0;
+}
+
+.print-table td:first-child {
+  width: 40%;
+}
+
+.print-persona-row + .print-persona-row {
+  margin-top: 12px;
+}
+
+.print-persona-meta,
+.print-sentence-top {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.print-persona-track {
+  background: #e7ebef;
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.print-persona-track span {
+  background: #0f766e;
+  display: block;
+  height: 100%;
+}
+
+.print-summary {
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.print-sentence-item {
+  border-left-width: 4px;
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  page-break-inside: avoid;
+}
+
+.print-sentence-item.high {
+  border-left-color: #ef4444;
+}
+
+.print-sentence-item.mid {
+  border-left-color: #f59e0b;
+}
+
+.print-sentence-item.low {
+  border-left-color: #16a34a;
+}
+
+.print-sentence-item p {
+  color: #111111;
+  line-height: 1.7;
+  margin: 0 0 8px;
+}
+
+.print-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.print-list li + li {
+  margin-top: 8px;
+}
+
+.print-disclaimer {
+  background: #f5f7f8;
+  border: 1px solid #d9dde3;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.7;
+  padding: 14px 16px;
+}
+
+@media (max-width: 900px) {
+  .print-metrics,
+  .print-two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 1080px) {
   .workspace,
   .analysis-grid,
@@ -630,5 +853,45 @@ textarea {
   button,
   select {
     width: 100%;
+  }
+}
+
+@media print {
+  @page {
+    margin: 14mm;
+    size: A4;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+
+  body.printing > :not(#printReport) {
+    display: none !important;
+  }
+
+  body.printing #printReport {
+    display: block !important;
+  }
+
+  #printReport,
+  #printReport * {
+    visibility: visible !important;
+  }
+
+  #printReport {
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    position: static;
+    width: 100%;
+  }
+
+  .print-report {
+    box-shadow: none;
+    max-width: none;
+    padding: 0;
   }
 }

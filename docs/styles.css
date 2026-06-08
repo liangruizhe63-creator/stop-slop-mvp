@@ -590,6 +590,10 @@ textarea {
   margin-bottom: 6px;
 }
 
+.report-actions button {
+  white-space: nowrap;
+}
+
 @media (max-width: 1080px) {
   .workspace,
   .analysis-grid,

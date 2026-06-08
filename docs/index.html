@@ -47,7 +47,7 @@
           <textarea id="draft" spellcheck="false"></textarea>
 
           <div class="actions">
-            <button id="rewriteBtn" class="primary" type="button">开始检测</button>
+            <button id="analyzeBtn" class="primary" type="button">开始检测</button>
             <button id="clearBtn" type="button">清空</button>
           </div>
         </div>
@@ -61,6 +61,7 @@
             <div class="report-actions">
               <span id="riskBadge" class="risk-badge risk-neutral">等待检测</span>
               <button id="copyBtn" type="button">复制结果</button>
+              <button id="exportBtn" type="button">导出 TXT</button>
             </div>
           </div>
 
@@ -102,22 +103,18 @@
             </div>
           </div>
 
-          <div class="stats-grid">
-            <article class="stat-tile">
-              <span>字数</span>
-              <strong id="wordCount">0</strong>
-            </article>
-            <article class="stat-tile">
-              <span>句子数</span>
-              <strong id="sentenceCount">0</strong>
-            </article>
-            <article class="stat-tile">
-              <span>平均句长</span>
-              <strong id="averageLength">0</strong>
-            </article>
+          <div class="stats-grid report-stats">
             <article class="stat-tile">
               <span>命中规则数</span>
               <strong id="ruleCount">0</strong>
+            </article>
+            <article class="stat-tile">
+              <span>高风险句子数</span>
+              <strong id="highRiskCount">0</strong>
+            </article>
+            <article class="stat-tile">
+              <span>主要风险来源</span>
+              <strong id="primaryRisk">待检测</strong>
             </article>
           </div>
 
@@ -133,13 +130,43 @@
       </section>
 
       <section class="analysis-grid">
+        <article class="panel wide">
+          <div class="panel-header compact">
+            <div>
+              <p class="section-kicker">Sentence Risk</p>
+              <h2>句子级 AI 痕迹高亮</h2>
+            </div>
+            <span id="modeBadge" class="mode-badge">标准模式</span>
+          </div>
+          <div id="annotated" class="sentence-list empty">这里会展示句子级风险分析。</div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header compact">
+            <div>
+              <p class="section-kicker">Risk Sources</p>
+              <h2>AI风险来源占比</h2>
+            </div>
+          </div>
+          <div id="sourceBreakdown" class="source-breakdown"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header compact">
+            <div>
+              <p class="section-kicker">Persona</p>
+              <h2>AI写作画像</h2>
+            </div>
+          </div>
+          <div id="personaGrid" class="persona-grid"></div>
+        </article>
+
         <article class="panel">
           <div class="panel-header compact">
             <div>
               <p class="section-kicker">Signals</p>
               <h2>AI风险特征</h2>
             </div>
-            <span id="modeBadge" class="mode-badge">标准模式</span>
           </div>
           <ul id="findings" class="detail-list">
             <li>输入文字后会列出具体问题。</li>
@@ -183,20 +210,11 @@
         <article class="panel wide">
           <div class="panel-header compact">
             <div>
-              <p class="section-kicker">Trace</p>
-              <h2>文本分析</h2>
+              <p class="section-kicker">Rules</p>
+              <h2>规则说明</h2>
             </div>
           </div>
-          <div class="trace-grid">
-            <div>
-              <h3>原稿标注</h3>
-              <div id="annotated" class="output empty">这里会高亮原稿里的风险表达。</div>
-            </div>
-            <div>
-              <h3>规则说明</h3>
-              <div id="ruleLegend" class="legend-grid"></div>
-            </div>
-          </div>
+          <div id="ruleLegend" class="legend-grid"></div>
         </article>
       </section>
     </main>

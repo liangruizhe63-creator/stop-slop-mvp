@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stop Slop MVP</title>
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">hardikpandya/stop-slop inspired MVP</p>
+        <h1>把“AI 味”草稿改得更像人写</h1>
+        <p class="lede">
+          输入中文或英文草稿。这个本地 demo 会标出套话、空泛表达和公式化结构，
+          再生成一个更直接、更自然的版本。
+        </p>
+      </section>
+
+      <section class="workspace">
+        <div class="panel input-panel">
+          <div class="panel-title">
+            <h2>草稿</h2>
+            <div class="sample-buttons">
+              <button type="button" data-sample="zh">中文样例</button>
+              <button type="button" data-sample="en">English sample</button>
+            </div>
+          </div>
+          <textarea id="draft" spellcheck="false"></textarea>
+          <div class="actions">
+            <button id="rewriteBtn" class="primary" type="button">检测并改写</button>
+            <button id="clearBtn" type="button">清空</button>
+          </div>
+        </div>
+
+        <div class="panel output-panel">
+          <div class="panel-title">
+            <h2>自然化版本</h2>
+            <span id="scoreBadge" class="score-badge">等待输入</span>
+          </div>
+          <div id="output" class="output empty">
+            结果会显示在这里。
+          </div>
+        </div>
+      </section>
+
+      <section class="insights">
+        <article class="panel">
+          <h2>原稿标注</h2>
+          <div id="annotated" class="output empty">
+            这里会高亮原稿里的套路表达。
+          </div>
+        </article>
+
+        <article class="panel">
+          <h2>命中问题</h2>
+          <ul id="findings" class="findings">
+            <li>输入文字后会列出具体问题。</li>
+          </ul>
+        </article>
+
+        <article class="panel">
+          <h2>五维评分</h2>
+          <div id="scoreGrid" class="score-grid"></div>
+        </article>
+      </section>
+    </main>
+
+    <script src="../app.js"></script>
+  </body>
+</html>

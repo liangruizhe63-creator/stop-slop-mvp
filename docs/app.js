@@ -25,8 +25,14 @@ const sourceBreakdownEl = document.querySelector("#sourceBreakdown");
 const personaGridEl = document.querySelector("#personaGrid");
 const historyListEl = document.querySelector("#historyList");
 const printReportEl = document.querySelector("#printReport");
+const optimizedTextEl = document.querySelector("#optimizedText");
+const optimizationNotesEl = document.querySelector("#optimizationNotes");
+const comparisonListEl = document.querySelector("#comparisonList");
 const exportBtnEl = document.querySelector("#exportBtn");
 const exportPdfBtnEl = document.querySelector("#exportPdfBtn");
+const optimizeBtnEl = document.querySelector("#optimizeBtn");
+const copyOptimizedBtnEl = document.querySelector("#copyOptimizedBtn");
+const recheckOptimizedBtnEl = document.querySelector("#recheckOptimizedBtn");
 const analyzeBtnEl = document.querySelector("#analyzeBtn");
 
 const brandName = "TextTrace";
@@ -48,21 +54,9 @@ const abstractWords = [
 ];
 
 const modeConfigs = {
-  light: {
-    badge: "轻度模式",
-    probabilityBias: -6,
-    sentenceBias: -1
-  },
-  balanced: {
-    badge: "标准模式",
-    probabilityBias: 0,
-    sentenceBias: 0
-  },
-  strong: {
-    badge: "强力模式",
-    probabilityBias: 8,
-    sentenceBias: 1
-  }
+  light: { badge: "轻度模式", probabilityBias: -6, sentenceBias: -1 },
+  balanced: { badge: "标准模式", probabilityBias: 0, sentenceBias: 0 },
+  strong: { badge: "强力模式", probabilityBias: 8, sentenceBias: 1 }
 };
 
 const sourceLabels = {
@@ -74,6 +68,31 @@ const sourceLabels = {
 };
 
 const sourceOrder = ["template", "repetition", "abstract", "connector", "detail"];
+
+const zhPhraseReplacements = [
+  { pattern: /^在当今[^，。！？]*[，,]?/, replacement: "", note: "删除模板化开场", reason: "模板化表达" },
+  { pattern: /值得注意的是[，,]?/g, replacement: "", note: "删除提示式套话", reason: "模板化表达" },
+  { pattern: /本文将深入探讨/g, replacement: "下面具体看", note: "弱化文章模板口吻", reason: "模板化表达" },
+  { pattern: /总体来看[，,]?/g, replacement: "", note: "减少总结式连接词", reason: "连接词过多" },
+  { pattern: /因此[，,]?/g, replacement: "所以", note: "减少生硬连接词", reason: "连接词过多" },
+  { pattern: /再次[，,]?/g, replacement: "另外，", note: "调整重复连接词", reason: "连接词过多" },
+  { pattern: /随着/g, replacement: "在", note: "简化高频连接词", reason: "连接词过多" },
+  { pattern: /正在深刻地改变/g, replacement: "已经改变", note: "替换空泛强调词", reason: "抽象词过多" },
+  { pattern: /实现更高质量的增长/g, replacement: "把内容写得更清楚", note: "替换抽象结果表述", reason: "抽象词过多" },
+  { pattern: /表达效率的革命/g, replacement: "更直接的表达方式", note: "降低夸张表述", reason: "抽象词过多" },
+  { pattern: /积极拥抱这项能力/g, replacement: "先把这套方法用起来", note: "改成更自然的行动表达", reason: "模板化表达" }
+];
+
+const enPhraseReplacements = [
+  { pattern: /^In today's[^,.!?]*[, ]*/i, replacement: "", note: "Remove template-style opening", reason: "模板化表达" },
+  { pattern: /it is important to note that\s*/gi, replacement: "", note: "Remove announcement phrase", reason: "模板化表达" },
+  { pattern: /This article will explore/gi, replacement: "Let's look at", note: "Reduce article-template framing", reason: "模板化表达" },
+  { pattern: /therefore[, ]*/gi, replacement: "so ", note: "Reduce formal connector", reason: "连接词过多" },
+  { pattern: /moreover[, ]*/gi, replacement: "also ", note: "Soften repetitive connector", reason: "连接词过多" },
+  { pattern: /transformative force/gi, replacement: "useful tool in practice", note: "Replace abstract hype phrase", reason: "抽象词过多" },
+  { pattern: /meaningful outcomes/gi, replacement: "clearer drafts", note: "Make result description more concrete", reason: "抽象词过多" },
+  { pattern: /unlock efficiency/gi, replacement: "save editing time", note: "Use more direct wording", reason: "抽象词过多" }
+];
 
 function escapeHtml(value) {
   return value.replace(/[&<>\"']/g, (char) => ({
@@ -102,6 +121,116 @@ function tokenizeSentence(sentence) {
 function countMatches(sentence, words) {
   const lower = sentence.toLowerCase();
   return words.reduce((count, word) => count + (lower.includes(word.toLowerCase()) ? 1 : 0), 0);
+}
+
+function normalizeSpacing(text) {
+  return text
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.!?])/g, "$1")
+    .replace(/([。！？])\s+/g, "$1")
+    .replace(/([.!?])\s+/g, "$1 ")
+    .trim();
+}
+
+function trimLeadingConnectors(text) {
+  return text
+    .replace(/^(因此|再次|总体来看|另外|此外|同时)[，,\s]*/g, "")
+    .replace(/^(therefore|moreover|overall|meanwhile|in addition)\s+/gi, "");
+}
+
+function splitLongSentence(sentence, isChinese) {
+  const parts = sentence
+    .split(isChinese ? /[，；]/ : /[,;]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length < 2) {
+    return sentence;
+  }
+
+  if (isChinese) {
+    return `${parts[0]}。${parts.slice(1).join("，")}${/[。！？]$/.test(sentence) ? "" : "。"}`
+      .replace(/。。+/g, "。");
+  }
+
+  const first = parts[0].replace(/[.!?]+$/, "");
+  const rest = parts.slice(1).join(", ");
+  return `${first}. ${rest}${/[.!?]$/.test(sentence) ? "" : "."}`.replace(/\.\./g, ".");
+}
+
+function smoothSentenceStart(sentence, index, isChinese) {
+  if (index === 0) {
+    return sentence;
+  }
+
+  if (isChinese) {
+    return sentence
+      .replace(/^下面具体看/g, "再看")
+      .replace(/^另外，另外，/g, "另外，");
+  }
+
+  return sentence
+    .replace(/^Let's look at/gi, "Next, look at")
+    .replace(/^Also also/gi, "Also");
+}
+
+function optimizeSentenceText(sentenceProfile, index, isChinese) {
+  let text = sentenceProfile.text;
+  const replacements = isChinese ? zhPhraseReplacements : enPhraseReplacements;
+  const notes = [];
+
+  replacements.forEach((item) => {
+    const next = text.replace(item.pattern, item.replacement);
+    if (next !== text) {
+      text = next;
+      notes.push(item.note);
+    }
+  });
+
+  if (sentenceProfile.reasons.includes("连接词过多")) {
+    const next = trimLeadingConnectors(text);
+    if (next !== text) {
+      text = next;
+      notes.push("减少高频连接词");
+    }
+  }
+
+  if (sentenceProfile.reasons.includes("抽象词过多")) {
+    if (isChinese && !/\d/.test(text) && !/例如|比如|具体/.test(text)) {
+      text = text.replace(/这项能力/g, "这项能力，尤其是在具体写作场景里");
+      notes.push("补充更自然的落地语气");
+    }
+
+    if (!isChinese && !/\d/.test(text) && !/for example|in practice/i.test(text)) {
+      text = text.replace(/teams/gi, "teams in real editing work");
+      notes.push("Make abstract wording more grounded");
+    }
+  }
+
+  if (sentenceProfile.reasons.includes("句子过长")) {
+    const next = splitLongSentence(text, isChinese);
+    if (next !== text) {
+      text = next;
+      notes.push("拆分过长句");
+    }
+  }
+
+  text = normalizeSpacing(text);
+  text = smoothSentenceStart(text, index, isChinese);
+
+  if (isChinese) {
+    text = text.replace(/^，+/, "").replace(/，。/g, "。");
+    if (text && !/[。！？]$/.test(text)) {
+      text += "。";
+    }
+  } else if (text && !/[.!?]$/.test(text)) {
+    text += ".";
+  }
+
+  return {
+    text: text || sentenceProfile.text,
+    notes
+  };
 }
 
 function getSentenceProfile(sentence, index, allSentences, mode) {
@@ -138,12 +267,12 @@ function getSentenceProfile(sentence, index, allSentences, mode) {
     score += 2;
   }
 
-  if ((/[,，；;]/.test(sentence) && length > 42) || length > 70) {
+  if ((/[，,；;]/.test(sentence) && length > 42) || length > 70) {
     reasons.push("句子过长");
     score += 1;
   }
 
-  if (!hasDigit && !/“|”|"|\'/.test(sentence) && abstractCount >= 1 && length > 28) {
+  if (!hasDigit && !/“|”|"|'/.test(sentence) && abstractCount >= 1 && length > 28) {
     reasons.push("细节缺失");
     sources.detail += 1;
     score += 2;
@@ -171,24 +300,11 @@ function getSentenceProfile(sentence, index, allSentences, mode) {
   if (score >= 6) level = "high";
   else if (score >= 3) level = "mid";
 
-  return {
-    text: sentence,
-    level,
-    score,
-    reasons,
-    sources
-  };
+  return { text: sentence, level, score, reasons, sources };
 }
 
 function getAggregateSources(sentenceProfiles) {
-  const totals = {
-    template: 0,
-    repetition: 0,
-    abstract: 0,
-    connector: 0,
-    detail: 0
-  };
-
+  const totals = { template: 0, repetition: 0, abstract: 0, connector: 0, detail: 0 };
   sentenceProfiles.forEach((sentence) => {
     sourceOrder.forEach((key) => {
       totals[key] += sentence.sources[key];
@@ -210,10 +326,7 @@ function computeProbabilities(sentenceProfiles, mode) {
   const highCount = sentenceProfiles.filter((sentence) => sentence.level === "high").length * 7;
   const midCount = sentenceProfiles.filter((sentence) => sentence.level === "mid").length * 3;
   const ai = Math.max(6, Math.min(97, Math.round(base + highCount + midCount + modeConfigs[mode].probabilityBias)));
-  return {
-    ai,
-    human: 100 - ai
-  };
+  return { ai, human: 100 - ai };
 }
 
 function getRiskMeta(aiProbability) {
@@ -242,6 +355,16 @@ function getAverageLength(text) {
   return Math.round(text.length / getSentenceCount(text));
 }
 
+function getLegendReason(key) {
+  return {
+    template: "常见模板句、套话开头和自动化总结句。",
+    repetition: "多个句子在结构或开头上过于相似。",
+    abstract: "抽象名词、评价词或包装词密度偏高。",
+    connector: "因此、总体来看、随着等连接词依赖明显。",
+    detail: "缺少数字、案例、场景或具体动作。"
+  }[key];
+}
+
 function renderLegend() {
   ruleLegendEl.innerHTML = sourceOrder.map((key) => `
     <article class="legend-card">
@@ -249,17 +372,6 @@ function renderLegend() {
       <div>${getLegendReason(key)}</div>
     </article>
   `).join("");
-}
-
-function getLegendReason(key) {
-  const reasons = {
-    template: "常见模板句、套话开头和自动化总结句。",
-    repetition: "多个句子在结构或开头上过于相似。",
-    abstract: "抽象名词、评价词或包装词密度偏高。",
-    connector: "因此、总体来看、随着等连接词依赖明显。",
-    detail: "缺少数字、案例、场景或具体动作。"
-  };
-  return reasons[key];
 }
 
 function renderSentenceList(sentenceProfiles) {
@@ -321,6 +433,14 @@ function renderPersona(sourceData, aiProbability) {
       </div>
     </article>
   `).join("");
+
+  return {
+    template: sourceMap.template || 0,
+    repetition: sourceMap.repetition || 0,
+    abstract: sourceMap.abstract || 0,
+    detail: Math.max(0, 100 - (sourceMap.detail || 0)),
+    humanity: Math.max(0, 100 - aiProbability)
+  };
 }
 
 function renderScores(sentenceProfiles) {
@@ -352,10 +472,7 @@ function renderScores(sentenceProfiles) {
 }
 
 function renderFindings(sentenceProfiles) {
-  const risky = sentenceProfiles
-    .filter((sentence) => sentence.level !== "low")
-    .slice(0, 5);
-
+  const risky = sentenceProfiles.filter((sentence) => sentence.level !== "low").slice(0, 5);
   findingsEl.innerHTML = risky.length
     ? risky.map((sentence) => `<li><strong>${sentence.reasons[0]}</strong>：${escapeHtml(sentence.text.slice(0, 54))}${sentence.text.length > 54 ? "..." : ""}</li>`).join("")
     : "<li>没有明显高风险模板表达，当前文本风险较低。</li>";
@@ -366,51 +483,29 @@ function renderSuggestions(sentenceProfiles, sourceData) {
   const sourceMap = Object.fromEntries(sourceData.map((item) => [item.key, item.ratio]));
   const longSentenceCount = sentenceProfiles.filter((sentence) => sentence.reasons.includes("句子过长")).length;
 
-  if ((sourceMap.connector || 0) >= 20) {
-    suggestions.push("连接词依赖较强，建议减少“随着、因此、总体来看”等词的密度，让句子更直接。");
-  }
-  if ((sourceMap.abstract || 0) >= 20) {
-    suggestions.push("抽象词偏多，建议加入真实案例、数字、对象或具体场景。");
-  }
-  if (longSentenceCount >= 2) {
-    suggestions.push("长句较多，建议把一条句子拆成两到三条信息更集中的短句。");
-  }
-  if ((sourceMap.repetition || 0) >= 18) {
-    suggestions.push("句式重复明显，建议调整段落节奏，不要连续使用同一种综述结构。");
-  }
-  if ((sourceMap.detail || 0) >= 18) {
-    suggestions.push("细节支撑不足，建议补充时间、人物、数据、事件过程或具体引用。");
-  }
-  if (!suggestions.length) {
-    suggestions.push("当前文本整体较自然，建议继续增强事实密度和个体表达。");
-  }
+  if ((sourceMap.connector || 0) >= 20) suggestions.push("连接词依赖较强，建议减少“随着、因此、总体来看”等词的密度，让句子更直接。");
+  if ((sourceMap.abstract || 0) >= 20) suggestions.push("抽象词偏多，建议加入真实案例、数字、对象或具体场景。");
+  if (longSentenceCount >= 2) suggestions.push("长句较多，建议把一条句子拆成两到三条信息更集中的短句。");
+  if ((sourceMap.repetition || 0) >= 18) suggestions.push("句式重复明显，建议调整段落节奏，不要连续使用同一种综述结构。");
+  if ((sourceMap.detail || 0) >= 18) suggestions.push("细节支撑不足，建议补充时间、人物、数据、事件过程或具体引用。");
+  if (!suggestions.length) suggestions.push("当前文本整体较自然，建议继续增强事实密度和个体表达。");
 
   rewriteNotesEl.innerHTML = suggestions.map((item) => `<li>${item}</li>`).join("");
+  return suggestions;
 }
 
-function renderSummary(text, probabilities, riskMeta, sourceData, sentenceProfiles) {
+function renderSummary(probabilities, riskMeta, sourceData, sentenceProfiles) {
   const primary = sourceData[0]?.label || "待检测";
   const highCount = sentenceProfiles.filter((sentence) => sentence.level === "high").length;
   const summary = [
     `${brandName} 判断这段文本的 AI 生成概率为 ${probabilities.ai}%，当前属于${riskMeta.level}。`,
     `主要风险来源集中在 ${primary}，同时命中 ${sentenceProfiles.length} 句中的 ${highCount} 句高风险表达。`,
-    `如果要降低风险，优先处理高风险句子中的模板化表达、抽象词和连接词依赖。`
+    "如果要降低写作痕迹，优先处理高风险句子中的模板化表达、抽象词和连接词依赖。"
   ].join("\n\n");
 
   outputEl.textContent = summary;
   outputEl.classList.remove("empty");
   return summary;
-}
-
-function saveHistory(text, probabilities, riskMeta) {
-  const history = JSON.parse(localStorage.getItem(historyKey) || "[]");
-  history.unshift({
-    time: new Date().toLocaleString("zh-CN"),
-    ai: probabilities.ai,
-    level: riskMeta.level,
-    preview: `${text.slice(0, 48)}${text.length > 48 ? "..." : ""}`
-  });
-  localStorage.setItem(historyKey, JSON.stringify(history.slice(0, 5)));
 }
 
 function renderHistory() {
@@ -432,13 +527,15 @@ function renderHistory() {
   `).join("");
 }
 
-function getTextStats(text) {
-  return {
-    chars: text.length,
-    words: getWordCount(text),
-    sentences: getSentenceCount(text),
-    averageLength: getAverageLength(text)
-  };
+function saveHistory(text, probabilities, riskMeta) {
+  const history = JSON.parse(localStorage.getItem(historyKey) || "[]");
+  history.unshift({
+    time: new Date().toLocaleString("zh-CN"),
+    ai: probabilities.ai,
+    level: riskMeta.level,
+    preview: `${text.slice(0, 48)}${text.length > 48 ? "..." : ""}`
+  });
+  localStorage.setItem(historyKey, JSON.stringify(history.slice(0, 5)));
 }
 
 function updateTopMetrics(stats, probabilities, riskMeta, sourceData, sentenceProfiles) {
@@ -460,7 +557,100 @@ function updateTopMetrics(stats, probabilities, riskMeta, sourceData, sentencePr
   progressFillEl.style.background = riskMeta.color;
 }
 
+function getTextStats(text) {
+  return {
+    chars: text.length,
+    words: getWordCount(text),
+    sentences: getSentenceCount(text),
+    averageLength: getAverageLength(text)
+  };
+}
+
+function buildOptimization(report) {
+  const isChinese = /[\u4e00-\u9fa5]/.test(report.text);
+  const notes = new Set();
+  const comparisons = [];
+
+  const optimizedSentences = report.sentenceProfiles.map((sentenceProfile, index) => {
+    const optimized = optimizeSentenceText(sentenceProfile, index, isChinese);
+    optimized.notes.forEach((note) => notes.add(note));
+
+    if (optimized.text !== sentenceProfile.text) {
+      const reason = sentenceProfile.reasons.filter((item) => item !== "表达较自然").join("、") || "表达自然度优化";
+      comparisons.push({
+        original: sentenceProfile.text,
+        optimized: optimized.text,
+        reason
+      });
+    }
+
+    if (sentenceProfile.reasons.includes("句式重复")) notes.add("调整句式节奏，减少重复开头");
+    if (sentenceProfile.reasons.includes("细节缺失")) notes.add("补足更贴近真实写作的表达重心");
+
+    return optimized.text;
+  });
+
+  const optimizedText = normalizeSpacing(optimizedSentences.join(isChinese ? "" : " "));
+  if (!notes.size) {
+    notes.add("整体结构较稳，仅做轻量表达自然度优化");
+  }
+
+  return {
+    text: optimizedText || report.text,
+    notes: Array.from(notes),
+    comparisons: comparisons.length
+      ? comparisons
+      : [{
+          original: report.text,
+          optimized: optimizedText || report.text,
+          reason: "当前文本风险较低，仅保留轻量优化结果"
+        }]
+  };
+}
+
+function ensureOptimization(report) {
+  if (!report.optimization) {
+    report.optimization = buildOptimization(report);
+  }
+  return report.optimization;
+}
+
+function renderOptimization(report) {
+  const optimization = ensureOptimization(report);
+  optimizedTextEl.textContent = optimization.text;
+  optimizedTextEl.classList.remove("empty");
+
+  optimizationNotesEl.innerHTML = optimization.notes.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  comparisonListEl.innerHTML = optimization.comparisons.map((item, index) => `
+    <article class="comparison-card">
+      <div class="comparison-meta">
+        <strong>修改 ${index + 1}</strong>
+        <span>${escapeHtml(item.reason)}</span>
+      </div>
+      <div class="comparison-grid">
+        <div class="comparison-column">
+          <span>原文风险句</span>
+          <p>${escapeHtml(item.original)}</p>
+        </div>
+        <div class="comparison-column">
+          <span>优化后表达</span>
+          <p>${escapeHtml(item.optimized)}</p>
+        </div>
+      </div>
+      <p class="comparison-reason">修改原因：${escapeHtml(item.reason)}</p>
+    </article>
+  `).join("");
+}
+
+function resetOptimizationViews() {
+  optimizedTextEl.textContent = "完成检测后，点击“优化文本”生成优化版本。";
+  optimizedTextEl.classList.add("empty");
+  optimizationNotesEl.innerHTML = "<li>生成优化文本后，这里会列出本次做过的调整。</li>";
+  comparisonListEl.innerHTML = '<div class="history-empty">这里会展示原句、优化后表达和修改原因。</div>';
+}
+
 function getExportText(report) {
+  const optimization = ensureOptimization(report);
   return [
     `${brandName} 检测报告`,
     `检测时间：${report.generatedAt}`,
@@ -473,15 +663,27 @@ function getExportText(report) {
     "句子级高亮结果：",
     ...report.sentenceProfiles.map((sentence, index) => `句子 ${index + 1} [${sentence.level}] ${sentence.text} ｜ 原因：${sentence.reasons.join("、")}`),
     "",
+    "文本优化：",
+    optimization.text,
+    "",
+    "修改说明：",
+    ...optimization.notes.map((item) => `- ${item}`),
+    "",
+    "优化前后对比：",
+    ...optimization.comparisons.map((item, index) => `修改 ${index + 1}\n原文：${item.original}\n优化后：${item.optimized}\n原因：${item.reason}`),
+    "",
     "优化建议：",
     ...report.suggestions,
     "",
     "检测摘要：",
-    report.summary
+    report.summary,
+    "",
+    "免责声明：本报告基于前端规则与启发式分析生成，仅用于辅助判断文本中的 AI 写作痕迹，不构成最终学术、法律或平台审核结论。"
   ].join("\n");
 }
 
 function buildPdfReportHtml(report) {
+  const optimization = ensureOptimization(report);
   const sourceRows = report.sourceData.map((item) => `
     <tr>
       <td>${item.label}</td>
@@ -517,7 +719,17 @@ function buildPdfReportHtml(report) {
   `).join("");
 
   const suggestionRows = report.suggestions.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
-  const disclaimer = "免责声明：本报告基于前端规则与启发式分析生成，仅用于辅助判断文本中的 AI 写作痕迹，不构成最终学术、法律或平台审核结论。";
+  const optimizationNoteRows = optimization.notes.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  const comparisonRows = optimization.comparisons.map((item, index) => `
+    <div class="print-sentence-item low">
+      <div class="print-sentence-top">
+        <strong>修改 ${index + 1}</strong>
+        <span>${escapeHtml(item.reason)}</span>
+      </div>
+      <p><strong>原文：</strong>${escapeHtml(item.original)}</p>
+      <p><strong>优化后：</strong>${escapeHtml(item.optimized)}</p>
+    </div>
+  `).join("");
 
   return `
     <main class="print-report">
@@ -554,9 +766,7 @@ function buildPdfReportHtml(report) {
       <section class="print-two-col">
         <section class="print-section">
           <h2>风险来源分析</h2>
-          <table class="print-table">
-            ${sourceRows}
-          </table>
+          <table class="print-table">${sourceRows}</table>
         </section>
         <section class="print-section">
           <h2>AI写作画像</h2>
@@ -565,13 +775,23 @@ function buildPdfReportHtml(report) {
       </section>
 
       <section class="print-section">
-        <h2>检测摘要</h2>
-        <div class="print-summary">${escapeHtml(report.summary)}</div>
+        <h2>逐句分析</h2>
+        ${sentenceRows}
       </section>
 
       <section class="print-section">
-        <h2>逐句分析</h2>
-        ${sentenceRows}
+        <h2>文本优化</h2>
+        <div class="print-summary">${escapeHtml(optimization.text)}</div>
+      </section>
+
+      <section class="print-section">
+        <h2>修改说明</h2>
+        <ul class="print-list">${optimizationNoteRows}</ul>
+      </section>
+
+      <section class="print-section">
+        <h2>优化前后对比</h2>
+        ${comparisonRows}
       </section>
 
       <section class="print-section">
@@ -581,7 +801,7 @@ function buildPdfReportHtml(report) {
 
       <section class="print-section">
         <h2>免责声明</h2>
-        <div class="print-disclaimer">${escapeHtml(disclaimer)}</div>
+        <div class="print-disclaimer">免责声明：本报告基于前端规则与启发式分析生成，仅用于辅助判断文本中的 AI 写作痕迹，不构成最终学术、法律或平台审核结论。</div>
       </section>
     </main>`;
 }
@@ -652,6 +872,8 @@ function run() {
     progressFillEl.style.background = "#9ca3af";
     sourceBreakdownEl.innerHTML = "";
     personaGridEl.innerHTML = "";
+    latestReport = null;
+    resetOptimizationViews();
     renderHistory();
     return;
   }
@@ -664,17 +886,17 @@ function run() {
   const stats = getTextStats(text);
   const aggregateScores = renderScores(sentenceProfiles);
   const generatedAt = new Date().toLocaleString("zh-CN");
-  const sourceMap = Object.fromEntries(sourceData.map((item) => [item.key, item.ratio]));
 
   renderSentenceList(sentenceProfiles);
   renderSourceBreakdown(sourceData);
-  renderPersona(sourceData, probabilities.ai);
+  const persona = renderPersona(sourceData, probabilities.ai);
   renderFindings(sentenceProfiles);
-  renderSuggestions(sentenceProfiles, sourceData);
-  const summary = renderSummary(text, probabilities, riskMeta, sourceData, sentenceProfiles);
+  const suggestions = renderSuggestions(sentenceProfiles, sourceData);
+  const summary = renderSummary(probabilities, riskMeta, sourceData, sentenceProfiles);
   updateTopMetrics(stats, probabilities, riskMeta, sourceData, sentenceProfiles);
   saveHistory(text, probabilities, riskMeta);
   renderHistory();
+  resetOptimizationViews();
 
   latestReport = {
     text,
@@ -689,14 +911,8 @@ function run() {
     highRiskCount: sentenceProfiles.filter((sentence) => sentence.level === "high").length,
     ruleHitCount: sentenceProfiles.reduce((sum, sentence) => sum + sentence.reasons.filter((reason) => reason !== "表达较自然").length, 0),
     primaryRisk: sourceData[0]?.label || "待检测",
-    persona: {
-      template: sourceMap.template || 0,
-      repetition: sourceMap.repetition || 0,
-      abstract: sourceMap.abstract || 0,
-      detail: Math.max(0, 100 - (sourceMap.detail || 0)),
-      humanity: Math.max(0, 100 - probabilities.ai)
-    },
-    suggestions: Array.from(rewriteNotesEl.querySelectorAll("li")).map((item) => item.textContent)
+    persona,
+    suggestions
   };
 }
 
@@ -708,6 +924,7 @@ document.querySelectorAll("[data-sample]").forEach((button) => {
 });
 
 analyzeBtnEl.addEventListener("click", run);
+
 document.querySelector("#clearBtn").addEventListener("click", () => {
   draftEl.value = "";
   latestReport = null;
@@ -727,6 +944,47 @@ document.querySelector("#copyBtn").addEventListener("click", async () => {
   } catch {
     copyHintEl.textContent = "复制失败，请手动选择文本。";
   }
+});
+
+optimizeBtnEl.addEventListener("click", () => {
+  if (!latestReport) {
+    run();
+  }
+
+  if (!latestReport) {
+    copyHintEl.textContent = "先输入文本并完成检测。";
+    return;
+  }
+
+  renderOptimization(latestReport);
+  copyHintEl.textContent = "文本优化已生成，可以继续复制、对比或重新检测。";
+});
+
+copyOptimizedBtnEl.addEventListener("click", async () => {
+  if (!latestReport) {
+    copyHintEl.textContent = "先完成检测并生成优化文本。";
+    return;
+  }
+
+  const optimization = ensureOptimization(latestReport);
+  try {
+    await navigator.clipboard.writeText(optimization.text);
+    copyHintEl.textContent = "优化后文本已复制到剪贴板。";
+  } catch {
+    copyHintEl.textContent = "复制优化文本失败，请手动复制。";
+  }
+});
+
+recheckOptimizedBtnEl.addEventListener("click", () => {
+  if (!latestReport) {
+    copyHintEl.textContent = "先完成检测并生成优化文本。";
+    return;
+  }
+
+  const optimization = ensureOptimization(latestReport);
+  draftEl.value = optimization.text;
+  run();
+  copyHintEl.textContent = "已经把优化后文本放回输入框，并重新完成检测。";
 });
 
 exportBtnEl.addEventListener("click", () => {
@@ -753,7 +1011,7 @@ exportPdfBtnEl.addEventListener("click", () => {
 
   const started = exportPdfReport(latestReport);
   if (started) {
-    copyHintEl.textContent = "PDF 报告已生成，浏览器会在内容加载完成后打开打印。";
+    copyHintEl.textContent = "PDF 报告已生成，浏览器会使用当前页面打印。";
   }
 });
 
@@ -761,5 +1019,6 @@ modeSelectEl.addEventListener("change", run);
 
 renderLegend();
 renderHistory();
+resetOptimizationViews();
 draftEl.value = samples.zh;
 run();

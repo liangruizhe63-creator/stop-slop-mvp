@@ -60,6 +60,7 @@
             </div>
             <div class="report-actions">
               <span id="riskBadge" class="risk-badge risk-neutral">等待检测</span>
+              <button id="optimizeBtn" type="button">优化文本</button>
               <button id="copyBtn" type="button">复制结果</button>
               <button id="exportBtn" type="button">导出 TXT</button>
               <button id="exportPdfBtn" type="button">导出 PDF</button>
@@ -205,6 +206,44 @@
           </div>
           <div id="historyList" class="history-list">
             <div class="history-empty">还没有检测记录。</div>
+          </div>
+        </article>
+
+        <article class="panel wide">
+          <div class="panel-header compact">
+            <div>
+              <p class="section-kicker">Optimization</p>
+              <h2>优化后文本</h2>
+            </div>
+            <div class="report-actions">
+              <button id="copyOptimizedBtn" type="button">复制优化文本</button>
+              <button id="recheckOptimizedBtn" type="button">重新检测优化后文本</button>
+            </div>
+          </div>
+          <div id="optimizedText" class="output empty">完成检测后，点击“优化文本”生成优化版本。</div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header compact">
+            <div>
+              <p class="section-kicker">Edits</p>
+              <h2>修改说明</h2>
+            </div>
+          </div>
+          <ul id="optimizationNotes" class="detail-list">
+            <li>生成优化文本后，这里会列出本次做过的调整。</li>
+          </ul>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header compact">
+            <div>
+              <p class="section-kicker">Compare</p>
+              <h2>优化前后对比</h2>
+            </div>
+          </div>
+          <div id="comparisonList" class="comparison-list">
+            <div class="history-empty">这里会展示原句、优化后表达和修改原因。</div>
           </div>
         </article>
 

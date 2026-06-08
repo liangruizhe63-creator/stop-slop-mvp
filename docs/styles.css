@@ -430,7 +430,8 @@ textarea {
 .history-list,
 .source-breakdown,
 .persona-grid,
-.sentence-list {
+.sentence-list,
+.comparison-list {
   display: grid;
   gap: 12px;
   margin: 0;
@@ -522,6 +523,61 @@ textarea {
   color: var(--muted);
   font-size: 0.86rem;
   margin: 8px 0 0;
+}
+
+.comparison-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.comparison-meta {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.comparison-meta strong {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.comparison-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.comparison-column {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.comparison-column span {
+  color: var(--muted);
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.comparison-column p,
+.comparison-reason {
+  color: var(--text);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.comparison-reason {
+  color: var(--muted);
+  margin-top: 12px;
 }
 
 .sentence-list.empty {
@@ -823,6 +879,10 @@ textarea {
   .probability-board,
   .probability-stats,
   .report-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .comparison-grid {
     grid-template-columns: 1fr;
   }
 }
